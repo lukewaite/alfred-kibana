@@ -8,7 +8,7 @@ __version__ = '0.0.1'
 
 log = None
 
-def search_for_project(project):
+def search_for_item(project):
     """Generate a string search key for a project"""
     elements = []
     elements.append(project['attributes']['title'])
@@ -52,7 +52,8 @@ def main(wf):
 
     query = args.query
 
-    projects = wf.cached_data('saved_searches', None, max_age=0)
+    saved_searches = wf.cached_data('saved_searches', None, max_age=0)
+    dashboards = wf.cached_data('dashboards', None, max_age=0)
 
     if wf.update_available:
         # Add a notification to top of Script Filter results
@@ -62,7 +63,7 @@ def main(wf):
                     icon=ICON_INFO)
 
     # Notify the user if the cache is being updated
-    if is_running('update') and not projects:
+    if is_running('update') and not saved_searches:
         wf.rerun = 0.5
         wf.add_item('Updating saved search list via Kibana...',
                     subtitle=u'This can take some time if you have a large number of objects.',
@@ -76,23 +77,37 @@ def main(wf):
         wf.rerun = 0.5
 
     # If script was passed a query, use it to filter projects
-    if query and projects:
-        projects = wf.filter(query, projects, key=search_for_project, min_score=20)
+    if query and saved_searches:
+        saved_searches = wf.filter(query, saved_searches, key=search_for_item, min_score=20)
 
-    if not projects:  # we have no data to show, so show a warning and stop
-        wf.add_item('No saved searches found', icon=ICON_WARNING)
+    # If script was passed a query, use it to filter projects
+    if query and dashboards:
+        dashboards = wf.filter(query, dashboards, key=search_for_item, min_score=20)
+
+    if not dashboards and not saved_searches:
+        wf.add_item('No saved searches or dashboards found', icon=ICON_WARNING)
         wf.send_feedback()
         return 0
 
     # Loop through the returned posts and add an item for each to
     # the list of results for Alfred
-    for project in projects:
-        wf.add_item(title=project['attributes']['title'],
+    for search in saved_searches:
+        wf.add_item(title=search['attributes']['title'],
                     # subtitle=project['path_with_namespace'],
-                    arg=wf.settings['api_url'] + '/app/kibana#/discover/' + project['id'],
+                    arg=wf.settings['api_url'] + '/app/kibana#/discover/' + search['id'],
                     valid=True,
                     icon=None,
-                    uid=project['id'])
+                    uid=search['id'])
+
+    # Loop through the returned posts and add an item for each to
+    # the list of results for Alfred
+    for dashboard in dashboards:
+        wf.add_item(title=dashboard['attributes']['title'],
+                    # subtitle=project['path_with_namespace'],
+                    arg=wf.settings['api_url'] + '/app/kibana#/dashboard/' + dashboard['id'],
+                    valid=True,
+                    icon=None,
+                    uid=dashboard['id'])
 
     # Send the results to Alfred as XML
     wf.send_feedback()
