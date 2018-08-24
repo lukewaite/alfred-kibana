@@ -2,14 +2,14 @@
 
 from workflow import web, Workflow, PasswordNotFound
 
-def get_projects(api_key, url):
+def get_saved_searches(api_key, url):
     """
     Parse all pages of projects
     :return: list
     """
-    return get_project_page(api_key, url, 1, [])
+    return get_saved_searches_page(api_key, url, 1, [])
 
-def get_project_page(api_key, url, page, list):
+def get_saved_searches_page(api_key, url, page, list):
     log.info("Calling API page {page}".format(page=page))
     params = dict(type='search', per_page=100, page=page, search_fields='title')
     headers = {'accept-encoding':'gzip'}
@@ -24,7 +24,7 @@ def get_project_page(api_key, url, page, list):
 
     nextpage = r.headers.get('X-Next-Page')
     if nextpage:
-        result = get_project_page(api_key, url, nextpage, result)
+        result = get_saved_searches_page(api_key, url, nextpage, result)
 
     return result
 
@@ -32,15 +32,14 @@ def main(wf):
     try:
         api_url = wf.settings.get('api_url')
 
-        # Retrieve projects from cache if available and no more than 600
-        # seconds old
+        # A wrapper function for the cached call below
         def wrapper():
-            return get_projects('', api_url)
+            return get_saved_searches('', api_url)
 
-        projects = wf.cached_data('projects', wrapper, max_age=3600)
+        saved_searches = wf.cached_data('saved_searches', wrapper, max_age=3600)
 
         # Record our progress in the log file
-        log.debug('{} kibana projects cached'.format(len(projects)))
+        log.debug('{} kibana searches cached'.format(len(saved_searches)))
 
     except PasswordNotFound:  # API key has not yet been set
         # Nothing we can do about this, so just log it

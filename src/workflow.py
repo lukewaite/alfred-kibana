@@ -52,7 +52,7 @@ def main(wf):
 
     query = args.query
 
-    projects = wf.cached_data('projects', None, max_age=0)
+    projects = wf.cached_data('saved_searches', None, max_age=0)
 
     if wf.update_available:
         # Add a notification to top of Script Filter results
@@ -70,7 +70,7 @@ def main(wf):
                     icon=ICON_INFO)
 
     # Start update script if cached data is too old (or doesn't exist)
-    if not wf.cached_data_fresh('projects', max_age=3600) and not is_running('update'):
+    if not wf.cached_data_fresh('saved_searches', max_age=3600) and not is_running('update'):
         cmd = ['/usr/bin/python', wf.workflowfile('update.py')]
         run_in_background('update', cmd)
         wf.rerun = 0.5
@@ -80,7 +80,7 @@ def main(wf):
         projects = wf.filter(query, projects, key=search_for_project, min_score=20)
 
     if not projects:  # we have no data to show, so show a warning and stop
-        wf.add_item('No projects found', icon=ICON_WARNING)
+        wf.add_item('No saved searches found', icon=ICON_WARNING)
         wf.send_feedback()
         return 0
 
